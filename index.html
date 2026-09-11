@@ -1,0 +1,1589 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>고2 역학과 에너지 - 로켓의 원리 시뮬레이터</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        space: { 900: '#0b0f19', 800: '#111827', 700: '#1f2937', 600: '#374151', accent: '#3b82f6', fire: '#ef4444' }
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        window.MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] } };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+
+    <style>
+        body { background-color: #0b0f19; color: #f3f4f6; }
+        .tab-btn.active { border-bottom: 2px solid #3b82f6; color: #3b82f6; }
+        canvas { display: block; width: 100%; height: 100%; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111827; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+        .slider-compact { height: 4px; }
+    </style>
+</head>
+<body class="h-screen flex flex-col font-sans overflow-hidden">
+
+    <header class="bg-space-800 border-b border-space-700 shadow-md z-10 flex-shrink-0">
+        <div class="container mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-rocket text-space-accent text-2xl"></i>
+                <h1 class="text-xl font-bold text-white tracking-tight">로켓의 원리 시뮬레이터</h1>
+            </div>
+            <nav class="flex h-full overflow-x-auto">
+                <button id="btn-tab-s0" onclick="switchTab('s0')" class="tab-btn active px-4 h-full flex items-center gap-2 hover:bg-space-700 transition-colors text-sm font-semibold whitespace-nowrap">
+                    <i class="fa-solid fa-ship"></i> [Step 0] 발포정 보트
+                </button>
+                <button id="btn-tab-s1" onclick="switchTab('s1')" class="tab-btn px-4 h-full flex items-center gap-2 text-slate-400 hover:bg-space-700 transition-colors text-sm font-semibold whitespace-nowrap">
+                    <i class="fa-solid fa-arrow-up-right-dots"></i> [Step 1] 로켓 기초
+                </button>
+                <button id="btn-tab-s2" onclick="switchTab('s2')" class="tab-btn px-4 h-full flex items-center gap-2 text-slate-400 hover:bg-space-700 transition-colors text-sm font-semibold whitespace-nowrap">
+                    <i class="fa-solid fa-earth-americas"></i> [Step 2] 3단 로켓 지구 탈출
+                </button>
+                <button id="btn-tab-guide" onclick="switchTab('guide')" class="tab-btn px-4 h-full flex items-center gap-2 text-slate-400 hover:bg-space-700 transition-colors text-sm font-semibold whitespace-nowrap">
+                    <i class="fa-solid fa-book"></i> 개념 가이드
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="flex-1 relative overflow-hidden flex">
+        
+        <section id="tab-s0" class="w-full h-full flex flex-col md:flex-row bg-space-900 absolute inset-0 transition-opacity">
+            <div class="w-full md:w-80 bg-space-800 p-5 flex flex-col gap-4 border-r border-space-700 overflow-y-auto z-20">
+                <h2 class="text-lg font-bold text-white border-b border-space-600 pb-2">실험 설정</h2>
+                
+                <div class="bg-space-700 p-3 rounded-lg">
+                    <label class="block text-sm font-medium mb-1">보트 질량 ($m_{boat}$) [g]</label>
+                    <input type="range" id="s0-boat-mass" min="50" max="300" value="100" class="w-full mb-1">
+                    <div class="text-right text-sm text-space-accent font-mono" id="s0-boat-mass-val">100 g</div>
+                </div>
+
+                <div class="bg-space-700 p-3 rounded-lg">
+                    <label class="block text-sm font-medium mb-1">마개 질량 ($m_{stopper}$) [g]</label>
+                    <input type="range" id="s0-stopper-mass" min="5" max="50" value="10" class="w-full mb-1">
+                    <div class="text-right text-sm text-space-accent font-mono" id="s0-stopper-mass-val">10 g</div>
+                </div>
+
+                <div class="bg-space-700 p-3 rounded-lg">
+                    <label class="block text-sm font-medium mb-1">발포정 개수 (가스 발생률)</label>
+                    <input type="range" id="s0-tablet" min="1" max="5" value="2" class="w-full mb-1">
+                    <div class="text-right text-sm text-space-accent font-mono" id="s0-tablet-val">2 개</div>
+                </div>
+
+                <div class="bg-space-700 p-3 rounded-lg">
+                    <label class="block text-sm font-medium mb-1">마개 막음 정도 (임계 압력)</label>
+                    <input type="range" id="s0-pressure" min="50" max="200" value="100" class="w-full mb-1">
+                    <div class="text-right text-sm text-space-accent font-mono" id="s0-pressure-val">보통 (100)</div>
+                </div>
+
+                <div class="mt-4 flex gap-2">
+                    <button onclick="startS0Sim()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg transition-colors">
+                        <i class="fa-solid fa-play"></i> 실험 시작
+                    </button>
+                    <button onclick="resetS0Sim()" class="bg-space-600 hover:bg-space-500 text-white px-4 rounded-lg transition-colors">
+                        <i class="fa-solid fa-rotate-left"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex-1 flex flex-col relative bg-slate-900 overflow-hidden">
+                <div class="absolute top-4 left-4 right-4 flex justify-between gap-4 z-10 pointer-events-none">
+                    <div class="bg-space-800/80 backdrop-blur border border-space-600 p-4 rounded-xl shadow-lg w-64 pointer-events-auto">
+                        <h3 class="text-sm font-bold text-slate-300 mb-2 border-b border-space-600 pb-1">보트 운동량 ($p_{boat}$)</h3>
+                        <p class="text-2xl font-mono text-blue-400" id="s0-p-boat">0.0 <span class="text-xs text-slate-400">g·m/s</span></p>
+                    </div>
+                    <div class="bg-space-800/80 backdrop-blur border border-space-600 p-4 rounded-xl shadow-lg w-64 pointer-events-auto">
+                        <h3 class="text-sm font-bold text-slate-300 mb-2 border-b border-space-600 pb-1">마개 운동량 ($p_{stopper}$)</h3>
+                        <p class="text-2xl font-mono text-orange-400" id="s0-p-stopper">0.0 <span class="text-xs text-slate-400">g·m/s</span></p>
+                    </div>
+                </div>
+                
+                <div class="absolute top-4 left-1/2 -translate-x-1/2 bg-space-800/90 border border-green-500/50 p-3 rounded-full shadow-lg z-10 text-center pointer-events-auto flex flex-col items-center">
+                    <span class="text-sm font-bold text-slate-300 mb-1">방향 고려 총 운동량 $\Sigma p$</span>
+                    <span class="text-xl font-mono text-green-400" id="s0-p-total">0.0</span>
+                </div>
+
+                <div id="s0-canvas-container" class="flex-1 w-full h-full relative">
+                    <canvas id="s0-canvas"></canvas>
+                </div>
+                
+                <div class="h-56 md:h-2/5 bg-space-800 p-2 border-t border-space-700 w-full relative">
+                    <div class="absolute top-2 right-4 text-[11px] text-slate-300 bg-space-900/90 border border-space-600 p-2 rounded shadow z-10 max-w-sm pointer-events-none">
+                        <p class="font-bold text-orange-400 mb-1"><i class="fa-solid fa-circle-exclamation"></i> 총 운동량이 0이 유지되지 않는 이유?</p>
+                        이상적인 환경과 달리, 현실에서는 마찰(외부 힘)이 작용합니다.<br>보트가 받는 <b>물의 저항</b>이 마개가 받는 <b>공기 저항</b>보다 훨씬 커서 보트의 속도가 더 빨리 줄어들기 때문에 총 운동량이 변화하게 됩니다.
+                    </div>
+                    <canvas id="s0-chart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-s1" class="w-full h-full hidden flex-col md:flex-row bg-space-900 absolute inset-0 transition-opacity">
+            <div class="w-full md:w-80 bg-space-800 p-4 flex flex-col gap-3 border-r border-space-700 overflow-y-auto z-20">
+                <div class="flex justify-between items-center border-b border-space-600 pb-2">
+                    <h2 class="text-lg font-bold text-white">로켓 설계</h2>
+                    <select id="s1-preset" class="bg-space-900 text-xs border border-space-600 rounded p-1 text-slate-300" onchange="loadS1Preset()">
+                        <option value="default">기본 소형 로켓</option>
+                        <option value="heavy">무거운 탑재체 (실패)</option>
+                        <option value="fast">고효율 이온 엔진</option>
+                    </select>
+                </div>
+                
+                <div class="bg-space-700 p-1.5 rounded-lg flex gap-1">
+                    <button id="s1-btn-single" onclick="setS1StageType('single')" class="flex-1 bg-space-600 py-1.5 rounded text-sm font-bold border border-space-accent text-space-accent transition-all">단일 단</button>
+                    <button id="s1-btn-double" onclick="setS1StageType('double')" class="flex-1 bg-space-800 py-1.5 rounded text-sm font-bold text-slate-400 transition-all">2단 분리</button>
+                </div>
+
+                <div class="space-y-2 mt-1">
+                    <div class="bg-space-700/30 p-2 rounded">
+                        <label class="flex justify-between text-xs text-slate-300 mb-1">
+                            <span>가스 분사 속도 ($v_e$)</span> <span id="s1-ve-val" class="font-mono text-blue-300">2500 m/s</span>
+                        </label>
+                        <input type="range" id="s1-ve" min="500" max="4000" step="100" value="2500" class="w-full slider-compact bg-space-900 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    <div class="bg-space-700/30 p-2 rounded">
+                        <label class="flex justify-between text-xs text-slate-300 mb-1">
+                            <span>탑재체 질량 ($m_{payload}$)</span> <span id="s1-mp-val" class="font-mono text-blue-300">50 kg</span>
+                        </label>
+                        <input type="range" id="s1-mp" min="10" max="2000" step="10" value="50" class="w-full slider-compact bg-space-900 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    
+                    <div class="p-2 border border-space-600 rounded-md bg-space-800/80 shadow-inner">
+                        <p class="text-[11px] font-bold text-orange-400 mb-2">1단 부스터 제원</p>
+                        <label class="flex justify-between text-[11px] text-slate-300 mb-1">
+                            <span>연료 질량 ($m_{f1}$)</span> <span id="s1-mf1-val" class="font-mono text-orange-300">500 kg</span>
+                        </label>
+                        <input type="range" id="s1-mf1" min="100" max="10000" step="100" value="500" class="w-full slider-compact bg-space-900 rounded-lg appearance-none mb-2">
+                        <label class="flex justify-between text-[11px] text-slate-300 mb-1">
+                            <span>구조 질량 ($m_{s1}$)</span> <span id="s1-ms1-val" class="font-mono text-slate-400">100 kg</span>
+                        </label>
+                        <input type="range" id="s1-ms1" min="50" max="2000" step="50" value="100" class="w-full slider-compact bg-space-900 rounded-lg appearance-none">
+                    </div>
+
+                    <div id="s1-stage2-params" class="p-2 border border-space-600 rounded-md bg-space-800/80 shadow-inner hidden opacity-50 transition-opacity">
+                        <p class="text-[11px] font-bold text-blue-400 mb-2">2단 부스터 제원</p>
+                        <label class="flex justify-between text-[11px] text-slate-300 mb-1">
+                            <span>연료 질량 ($m_{f2}$)</span> <span id="s1-mf2-val" class="font-mono text-orange-300">300 kg</span>
+                        </label>
+                        <input type="range" id="s1-mf2" min="100" max="5000" step="50" value="300" class="w-full slider-compact bg-space-900 rounded-lg appearance-none mb-2">
+                        <label class="flex justify-between text-[11px] text-slate-300 mb-1">
+                            <span>구조 질량 ($m_{s2}$)</span> <span id="s1-ms2-val" class="font-mono text-slate-400">50 kg</span>
+                        </label>
+                        <input type="range" id="s1-ms2" min="10" max="1000" step="10" value="50" class="w-full slider-compact bg-space-900 rounded-lg appearance-none">
+                    </div>
+                </div>
+
+                <div class="bg-space-900 p-3 rounded-lg border border-space-600 mt-2">
+                    <p class="text-xs text-slate-400">이상적인 최대 속도 변화량 (치올콥스키)</p>
+                    <p class="text-lg font-mono text-green-400 mt-1">$\Delta v = $ <span id="s1-calc-dv">0</span> <span class="text-xs">m/s</span></p>
+                </div>
+
+                <div class="mt-2 bg-space-800/80 border border-space-600 p-3 rounded-lg text-xs text-slate-300 leading-relaxed shadow-inner">
+                    <p class="text-orange-400 font-bold mb-1"><i class="fa-solid fa-circle-info"></i> 고도와 중력가속도($g$)</p>
+                    <p>엔진 정지 후 가속도가 음수(-)가 되는 것은 중력 때문입니다.</p>
+                    <p class="mt-1">지표면에서는 $g \approx 9.8\text{ m/s}^2$이지만, 고도가 높아지면 거리에 반비례($\frac{1}{r^2}$)하여 중력이 점차 약해지는 것을 실시간 차트에서 확인할 수 있습니다.</p>
+                </div>
+
+                <div class="mt-auto flex gap-2 pt-2">
+                    <button onclick="startS1Sim()" class="flex-1 bg-space-fire hover:bg-red-600 text-white font-bold py-2.5 rounded-lg transition-colors">발사</button>
+                    <button onclick="resetS1Sim()" class="bg-space-600 hover:bg-space-500 text-white px-4 rounded-lg transition-colors"><i class="fa-solid fa-rotate-left"></i></button>
+                </div>
+            </div>
+
+            <div class="flex-1 flex flex-col md:flex-row relative">
+                <div id="s1-canvas-container" class="w-full md:w-1/2 h-1/2 md:h-full relative border-b md:border-b-0 md:border-r border-space-700 bg-black">
+                    <canvas id="s1-canvas"></canvas>
+                    
+                    <button onclick="toggleS1Zoom()" class="absolute top-4 right-4 bg-space-800/90 text-white border border-space-600 px-3 py-1.5 rounded text-xs hover:bg-space-700 transition-colors z-10 shadow-lg">
+                        <i class="fa-solid fa-magnifying-glass"></i> <span id="s1-zoom-text">시점: 추적</span>
+                    </button>
+                    
+                    <div class="absolute top-4 left-4 bg-space-900/80 backdrop-blur p-3 rounded border border-space-600 pointer-events-none z-10 shadow-lg">
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm font-mono">
+                            <span class="text-slate-400">고도 (h):</span><span class="text-white text-right" id="s1-hud-h">0 m</span>
+                            <span class="text-slate-400">속도 (v):</span><span class="text-blue-400 text-right" id="s1-hud-v">0.0 m/s</span>
+                            <span class="text-slate-400">가속도 (a):</span><span class="text-orange-400 text-right" id="s1-hud-a">0.0 m/s²</span>
+                            <span class="text-slate-400">총 질량:</span><span class="text-white text-right" id="s1-hud-m">0 kg</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="w-full md:w-1/2 h-1/2 md:h-full bg-space-900 p-4 flex flex-col gap-4 overflow-y-auto">
+                    <div class="flex-1 min-h-[150px] w-full bg-space-800 rounded-lg p-2 border border-space-700"><canvas id="s1-chart-v"></canvas></div>
+                    <div class="flex-1 min-h-[150px] w-full bg-space-800 rounded-lg p-2 border border-space-700"><canvas id="s1-chart-a"></canvas></div>
+                    <div class="flex-1 min-h-[150px] w-full bg-space-800 rounded-lg p-2 border border-space-700"><canvas id="s1-chart-e"></canvas></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-s2" class="w-full h-full hidden flex-col md:flex-row bg-space-900 absolute inset-0 transition-opacity">
+             <div class="w-full md:w-[340px] bg-space-800 flex flex-col border-r border-space-700 overflow-y-auto z-20">
+                <div class="p-4 border-b border-space-700">
+                    <h2 class="text-lg font-bold text-white mb-2">Mission: 지구 탈출 (3단 로켓)</h2>
+                    <p class="text-[11px] text-slate-400 leading-relaxed">
+                        실제 로켓은 여러 단을 분리하여 구조 질량을 버려 효율을 높입니다. <b>제1우주속도(7.9km/s, 궤도)</b> 또는 <b>제2우주속도(11.2km/s, 탈출)</b>를 목표로 설계해 보세요.
+                    </p>
+                </div>
+                
+                <div class="p-4 flex flex-col gap-3 flex-1">
+                    <div class="flex justify-between items-center bg-space-900 p-2 rounded border border-space-600">
+                        <span class="text-xs font-bold text-slate-300"><i class="fa-solid fa-list text-blue-400"></i> 프리셋</span>
+                        <select id="s2-preset" onchange="loadS2Preset()" class="bg-space-800 text-xs border border-space-600 rounded p-1 text-slate-300 outline-none">
+                            <option value="custom">사용자 설정</option>
+                            <option value="fail">무거운 기체 (실패)</option>
+                            <option value="nuri">누리호 (KSLV-II, 3단)</option>
+                            <option value="escape">지구 탈출 달성 설계</option>
+                        </select>
+                    </div>
+
+                    <!-- 1단 -->
+                    <div class="bg-space-700/50 border border-space-600 rounded-xl p-3 shadow-inner">
+                        <div class="flex items-center gap-2 mb-2"><div class="w-2 h-2 rounded-full bg-orange-500"></div><h3 class="text-xs font-bold text-white">1단 부스터 (Stage 1)</h3></div>
+                        <div class="space-y-2">
+                            <div>
+                                <div class="flex justify-between text-[10px] text-slate-300 mb-1"><span>연료 ($m_{f1}$)</span><span id="s2-mf1-val" class="font-mono text-orange-300">110 t</span></div>
+                                <input type="range" id="s2-mf1" min="10" max="3000" step="10" value="110" class="w-full slider-compact bg-space-900 rounded-lg appearance-none">
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-[10px] text-slate-300 mb-1"><span>구조 ($m_{s1}$)</span><span id="s2-ms1-val" class="font-mono text-slate-300">20 t</span></div>
+                                <input type="range" id="s2-ms1" min="5" max="300" step="1" value="20" class="w-full slider-compact bg-space-900 rounded-lg appearance-none">
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-[10px] text-slate-300 mb-1"><span>분사속도 ($v_{e1}$)</span><span id="s2-ve1-val" class="font-mono text-blue-300">2.9 km/s</span></div>
+                                <input type="range" id="s2-ve1" min="1.0" max="5.0" step="0.1" value="2.9" class="w-full slider-compact bg-space-900 rounded-lg appearance-none">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 2단 -->
+                    <div class="bg-space-700/50 border border-space-600 rounded-xl p-3 shadow-inner">
+                        <div class="flex items-center gap-2 mb-2"><div class="w-2 h-2 rounded-full bg-blue-500"></div><h3 class="text-xs font-bold text-white">2단 부스터 (Stage 2)</h3></div>
+                        <div class="space-y-2">
+                            <div>
+                                <div class="flex justify-between text-[10px] text-slate-300 mb-1"><span>연료 ($m_{f2}$)</span><span id="s2-mf2-val" class="font-mono text-orange-300">35 t</span></div>
+                                <input type="range" id="s2-mf2" min="5" max="1000" step="5" value="35" class="w-full slider-compact bg-space-900 rounded-lg appearance-none">
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-[10px] text-slate-300 mb-1"><span>구조 ($m_{s2}$)</span><span id="s2-ms2-val" class="font-mono text-slate-300">8 t</span></div>
+                                <input type="range" id="s2-ms2" min="1" max="100" step="1" value="8" class="w-full slider-compact bg-space-900 rounded-lg appearance-none">
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-[10px] text-slate-300 mb-1"><span>분사속도 ($v_{e2}$)</span><span id="s2-ve2-val" class="font-mono text-blue-300">3.0 km/s</span></div>
+                                <input type="range" id="s2-ve2" min="1.0" max="5.0" step="0.1" value="3.0" class="w-full slider-compact bg-space-900 rounded-lg appearance-none">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3단 (탑재체 포함) -->
+                    <div class="bg-space-700/50 border border-space-600 rounded-xl p-3 shadow-inner">
+                        <div class="flex items-center gap-2 mb-2"><div class="w-2 h-2 rounded-full bg-green-500"></div><h3 class="text-xs font-bold text-white">3단 및 탑재체 (Stage 3 + Payload)</h3></div>
+                        <div class="space-y-2">
+                            <div>
+                                <div class="flex justify-between text-[10px] text-slate-300 mb-1"><span>연료 ($m_{f3}$)</span><span id="s2-mf3-val" class="font-mono text-orange-300">10 t</span></div>
+                                <input type="range" id="s2-mf3" min="1" max="300" step="1" value="10" class="w-full slider-compact bg-space-900 rounded-lg appearance-none">
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-[10px] text-slate-300 mb-1"><span>구조+탑재체 ($m_{s3} + m_p$)</span><span id="s2-ms3-val" class="font-mono text-slate-300">3 t</span></div>
+                                <input type="range" id="s2-ms3" min="0.5" max="100" step="0.5" value="3" class="w-full slider-compact bg-space-900 rounded-lg appearance-none">
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-[10px] text-slate-300 mb-1"><span>분사속도 ($v_{e3}$)</span><span id="s2-ve3-val" class="font-mono text-blue-300">3.2 km/s</span></div>
+                                <input type="range" id="s2-ve3" min="1.0" max="5.0" step="0.1" value="3.2" class="w-full slider-compact bg-space-900 rounded-lg appearance-none">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-space-900 border border-space-600 p-3 rounded-xl mt-auto shadow-lg">
+                        <p class="text-[10px] text-slate-400 uppercase tracking-wider mb-1">이론 총 속도 변화량 (중력손실 전)</p>
+                        <p class="text-xl font-mono text-green-400">$\Delta v = $ <span id="s2-theory-dv">0.00</span> <span class="text-sm">km/s</span></p>
+                    </div>
+
+                    <div class="flex gap-2">
+                        <button onclick="startS2Sim()" class="flex-1 bg-gradient-to-r from-space-fire to-orange-500 hover:from-red-600 hover:to-orange-600 text-white font-bold py-2.5 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-power-off"></i> 발사!
+                        </button>
+                        <button onclick="resetS2Sim()" class="bg-space-600 hover:bg-space-500 text-white px-4 rounded-xl transition-all" title="초기화">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex-1 relative bg-black flex flex-col">
+                <div id="s2-canvas-container" class="flex-1 relative w-full h-full">
+                    <canvas id="s2-canvas"></canvas>
+                    
+                    <button onclick="toggleS2Zoom()" class="absolute top-4 left-4 bg-space-800/90 text-white border border-space-600 px-3 py-1.5 rounded text-xs hover:bg-space-700 transition-colors z-10 shadow-lg">
+                        <i class="fa-solid fa-earth-americas"></i> <span id="s2-zoom-text">시점: 로켓 추적</span>
+                    </button>
+                    
+                    <div class="absolute top-4 right-4 bg-space-900/90 backdrop-blur border border-space-600 p-3 rounded-xl w-48 shadow-2xl pointer-events-none z-10">
+                        <div class="text-center border-b border-space-700 pb-2 mb-2">
+                            <span id="s2-status-badge" class="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-700 text-white shadow">대기 중</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs text-slate-400">속력 $v$</span><span id="s2-hud-v" class="font-mono text-sm text-blue-400">0.0 km/s</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs text-slate-400">고도 $h$</span><span id="s2-hud-h" class="font-mono text-sm text-green-400">0 km</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs text-slate-400">질량 $m$</span><span id="s2-hud-m" class="font-mono text-sm text-white">0 ton</span>
+                        </div>
+                        
+                        <div class="mt-3 space-y-1.5">
+                            <div>
+                                <div class="flex justify-between text-[9px] text-slate-400 mb-0.5"><span>1단 연료</span> <span id="s2-hud-f1">100%</span></div>
+                                <div class="w-full bg-space-800 h-1 rounded-full overflow-hidden"><div id="s2-bar-f1" class="bg-orange-500 h-full w-full"></div></div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-[9px] text-slate-400 mb-0.5"><span>2단 연료</span> <span id="s2-hud-f2">100%</span></div>
+                                <div class="w-full bg-space-800 h-1 rounded-full overflow-hidden"><div id="s2-bar-f2" class="bg-blue-500 h-full w-full"></div></div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-[9px] text-slate-400 mb-0.5"><span>3단 연료</span> <span id="s2-hud-f3">100%</span></div>
+                                <div class="w-full bg-space-800 h-1 rounded-full overflow-hidden"><div id="s2-bar-f3" class="bg-green-500 h-full w-full"></div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 결과 리포트 모달 -->
+                    <div id="s2-report" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-space-800/95 backdrop-blur border border-space-500 p-6 rounded-2xl shadow-[0_0_30px_rgba(0,0,0,0.8)] hidden z-30 w-80 text-center">
+                        <h3 class="text-xl font-bold text-white mb-1" id="s2-rep-title">임무 종료</h3>
+                        <p class="text-sm font-bold text-orange-400 mb-4" id="s2-rep-subtitle">지구 추락</p>
+                        
+                        <div class="bg-space-900 rounded-lg p-3 text-left space-y-2 mb-4 border border-space-700">
+                            <div class="flex justify-between border-b border-space-700 pb-1">
+                                <span class="text-xs text-slate-400">최대 고도</span><span class="font-mono text-sm text-white" id="s2-rep-hmax">0 km</span>
+                            </div>
+                            <div class="flex justify-between border-b border-space-700 pb-1">
+                                <span class="text-xs text-slate-400">최대 속력</span><span class="font-mono text-sm text-blue-400" id="s2-rep-vmax">0 km/s</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-xs text-slate-400">중력/저항 손실</span><span class="font-mono text-sm text-red-400" id="s2-rep-loss">0 km/s</span>
+                            </div>
+                        </div>
+                        <button onclick="document.getElementById('s2-report').classList.add('hidden')" class="w-full bg-space-600 hover:bg-space-500 py-2 rounded-lg text-white font-bold transition-colors shadow">닫기</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-guide" class="w-full h-full hidden bg-space-900 overflow-y-auto p-6 md:p-10">
+            <div class="max-w-4xl mx-auto space-y-8 pb-20">
+                <div class="text-center border-b border-space-700 pb-6">
+                    <h2 class="text-3xl font-bold text-white mb-2">역학과 에너지 탐구 활동지</h2>
+                    <p class="text-slate-400">운동량 보존 법칙과 우주선의 추진 원리, 로켓 방정식을 이해합니다.</p>
+                </div>
+
+                <div class="bg-space-800 rounded-2xl p-6 border border-space-700 shadow-lg">
+                    <h3 class="text-xl font-bold text-space-accent mb-4"><i class="fa-solid fa-ship mr-2"></i> 탐구 1. 운동량 보존 법칙과 우주선의 추진 (교과서 p.34)</h3>
+                    <div class="flex flex-col md:flex-row gap-6">
+                        <div class="flex-1 text-slate-300 leading-relaxed text-sm space-y-3">
+                            <p>발포정에서 발생한 기체 압력에 의해 마개가 밀려날 때, 보트와 마개로 이루어진 계(System)에는 외부 힘이 작용하지 않는다면 <b>총 운동량이 보존</b>됩니다.</p>
+                            <p class="bg-space-900 p-3 rounded text-center text-lg">
+                                $\Sigma p_{before} = 0 \quad \Rightarrow \quad m_{stopper} v_{stopper} + m_{boat} v_{boat} = 0$
+                            </p>
+                            <p>마개가 앞으로 튀어나가면($+v$), 보트는 반대 방향으로 밀려납니다($-v$). 이는 우주선이 가스를 뒤로 뿜어내며 앞으로 나아가는 원리(작용-반작용)와 같습니다.</p>
+                            <div class="border-l-4 border-orange-500 pl-3 bg-space-900/50 p-2 mt-2">
+                                <p class="text-xs text-orange-400 font-bold">시뮬레이션에서 총 운동량이 점차 커지는 이유는?</p>
+                                <p class="text-xs">실제 환경(수조)에서는 보트가 받는 물의 마찰력이 마개가 받는 공기 저항보다 훨씬 큽니다. 계 외부에서 작용하는 마찰력의 차이 때문에 이상적인 상태와 달리 운동량이 완전히 보존되지 않습니다.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-space-800 rounded-2xl p-6 border border-space-700 shadow-lg">
+                    <h3 class="text-xl font-bold text-orange-400 mb-4"><i class="fa-solid fa-rocket mr-2"></i> 탐구 2. 치올콥스키 로켓 방정식과 다단 로켓</h3>
+                    <div class="text-slate-300 leading-relaxed text-sm space-y-4">
+                        <p>우주로 나가기 위해 로켓은 연료를 연소시켜 고속으로 분사합니다. 획득 가능한 이론적 최대 속도 변화량 $\Delta v$는 다음과 같습니다.</p>
+                        <div class="bg-space-900 p-4 rounded-xl flex items-center justify-center border border-space-700 text-xl">
+                            $\Delta v = v_e \ln \left( \frac{m_0}{m_f} \right)$
+                        </div>
+                        <ul class="list-disc list-inside space-y-2 ml-2">
+                            <li>$v_e$: 가스 분사 속도 (엔진의 성능, 비추력과 비례)</li>
+                            <li>$m_0$: 발사 초기 총 질량 (구조체 + 연료 + 탑재체)</li>
+                            <li>$m_f$: 연료 소모 후 최종 질량 (구조체 + 탑재체)</li>
+                        </ul>
+                        <p class="text-xs text-blue-300">※ 실제로는 궤도로 올라가는 동안 중력과 공기저항 때문에 $\Delta v$ 손실(Gravity Drag)이 발생합니다.</p>
+                    </div>
+                </div>
+                
+                <div class="bg-space-800 rounded-2xl p-6 border border-space-700 shadow-lg">
+                    <h3 class="text-xl font-bold text-green-400 mb-4"><i class="fa-solid fa-earth-asia mr-2"></i> 탐구 3. 우주 속도 (지구 탈출)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-space-900 p-4 rounded-xl border border-space-700">
+                            <h4 class="font-bold text-white mb-2">제1 우주 속도 (저궤도 진입)</h4>
+                            <p class="text-sm text-slate-300 mb-2">지구로 떨어지지 않고 주위를 원운동하기 위한 최소 속력.</p>
+                            <p class="font-mono text-green-400 text-lg">$v_1 = \sqrt{gR} \approx 7.9 \text{ km/s}$</p>
+                        </div>
+                        <div class="bg-space-900 p-4 rounded-xl border border-space-700">
+                            <h4 class="font-bold text-white mb-2">제2 우주 속도 (지구 탈출)</h4>
+                            <p class="text-sm text-slate-300 mb-2">지구의 중력장을 완전히 벗어나기 위한 최소 속력 (역학적 에너지 보존).</p>
+                            <p class="font-mono text-orange-400 text-lg">$v_2 = \sqrt{2gR} \approx 11.2 \text{ km/s}$</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        let currentTab = 's0';
+
+        function switchTab(tabId) {
+            currentTab = tabId;
+            ['s0', 's1', 's2', 'guide'].forEach(t => {
+                const el = document.getElementById(`tab-${t}`);
+                const btn = document.getElementById(`btn-tab-${t}`);
+                if (t === tabId) {
+                    el.classList.remove('hidden');
+                    if(t !== 'guide') el.classList.add('flex');
+                    btn.classList.add('active', 'text-space-accent', 'bg-space-700');
+                    btn.classList.remove('text-slate-400');
+                } else {
+                    el.classList.add('hidden');
+                    el.classList.remove('flex');
+                    btn.classList.remove('active', 'text-space-accent', 'bg-space-700');
+                    btn.classList.add('text-slate-400');
+                }
+            });
+
+            // 캔버스 리사이즈 버그 해결을 위해 timeout 적용
+            setTimeout(() => {
+                if (tabId === 's0') resizeS0Canvas();
+                if (tabId === 's1') resizeS1Canvas();
+                if (tabId === 's2') resizeS2Canvas();
+            }, 50);
+        }
+
+        window.addEventListener('resize', () => {
+            if (currentTab === 's0') resizeS0Canvas();
+            if (currentTab === 's1') resizeS1Canvas();
+            if (currentTab === 's2') resizeS2Canvas();
+        });
+
+
+        let s0State = { running: false, tick: 0, pressure: 0, exploded: false, boatX: 0, stopperX: 0, boatV: 0, stopperV: 0 };
+        let s0AnimFrame;
+        let s0Chart;
+
+        function initS0Chart() {
+            const ctx = document.getElementById('s0-chart').getContext('2d');
+            s0Chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        { label: '보트 운동량 (p)', data: [], borderColor: '#3b82f6', borderWidth: 2, pointRadius: 0 },
+                        { label: '마개 운동량 (p)', data: [], borderColor: '#f97316', borderWidth: 2, pointRadius: 0 },
+                        { label: '총 운동량 (Σp)', data: [], borderColor: '#10b981', borderWidth: 3, pointRadius: 0, borderDash: [5, 5] }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, animation: false,
+                    scales: {
+                        x: { type: 'linear', position: 'bottom', title: {display:true, text:'시간 (틱)', color:'#94a3b8'}, grid: {color: '#334155'} },
+                        y: { title: {display:true, text:'운동량 (g·m/s)', color:'#94a3b8'}, grid: {color: '#334155'}, min: -200, max: 200 }
+                    },
+                    plugins: { legend: { display: true, labels: { color: '#cbd5e1' }, position: 'bottom' } }
+                }
+            });
+        }
+
+        function getS0Params() {
+            return {
+                mBoat: parseFloat(document.getElementById('s0-boat-mass').value) / 1000, 
+                mStopper: parseFloat(document.getElementById('s0-stopper-mass').value) / 1000,
+                tablets: parseInt(document.getElementById('s0-tablet').value),
+                limitP: parseInt(document.getElementById('s0-pressure').value)
+            };
+        }
+
+        document.querySelectorAll('#tab-s0 input[type=range]').forEach(el => {
+            el.addEventListener('input', (e) => {
+                const id = e.target.id;
+                const val = e.target.value;
+                if(id === 's0-boat-mass') document.getElementById('s0-boat-mass-val').innerText = val + ' g';
+                if(id === 's0-stopper-mass') document.getElementById('s0-stopper-mass-val').innerText = val + ' g';
+                if(id === 's0-tablet') document.getElementById('s0-tablet-val').innerText = val + ' 개';
+                if(id === 's0-pressure') document.getElementById('s0-pressure-val').innerText = val;
+                resetS0Sim();
+            });
+        });
+
+        function resetS0Sim() {
+            if(s0AnimFrame) cancelAnimationFrame(s0AnimFrame);
+            s0State = { running: false, tick: 0, pressure: 0, exploded: false, boatX: 0, stopperX: 0, boatV: 0, stopperV: 0 };
+            
+            if(s0Chart) {
+                s0Chart.data.datasets.forEach(ds => ds.data = []);
+                s0Chart.options.scales.y.min = -200;
+                s0Chart.options.scales.y.max = 200;
+                s0Chart.update();
+            }
+            updateS0HUD();
+            drawS0Canvas();
+        }
+
+        function startS0Sim() {
+            resetS0Sim();
+            s0State.running = true;
+            s0Loop();
+        }
+
+        function s0Loop() {
+            if (!s0State.running) return;
+            const p = getS0Params();
+            s0State.tick += 1;
+
+            if (!s0State.exploded) {
+                s0State.pressure += p.tablets * 0.5;
+                if (s0State.pressure >= p.limitP) {
+                    s0State.exploded = true;
+                    // 폭발 에너지 계산 및 운동량 보존을 통한 초기 속도 분배
+                    const energy = p.limitP * 0.01; 
+                    s0State.stopperV = Math.sqrt((2 * energy) / (p.mStopper + (p.mStopper*p.mStopper)/p.mBoat));
+                    s0State.boatV = (p.mStopper * s0State.stopperV) / p.mBoat; 
+                    
+                    const maxP = p.mStopper * s0State.stopperV * 1000;
+                    if(s0Chart) {
+                        s0Chart.options.scales.y.min = -maxP * 1.5;
+                        s0Chart.options.scales.y.max = maxP * 1.5;
+                    }
+                }
+            } else {
+                s0State.stopperX += s0State.stopperV;
+                s0State.boatX -= s0State.boatV; 
+                
+                // 물의 저항(보트)이 공기 저항(마개)보다 크다는 가정 (속도 감소율 다름)
+                s0State.stopperV *= 0.99; 
+                s0State.boatV *= 0.98;    
+            }
+
+            if (s0State.tick % 2 === 0 && s0Chart) {
+                // 부호를 포함한 방향성 운동량 계산
+                const p_boat = -p.mBoat * s0State.boatV * 1000; 
+                const p_stopper = p.mStopper * s0State.stopperV * 1000;
+                const p_total = p_boat + p_stopper;
+                
+                s0Chart.data.datasets[0].data.push({x: s0State.tick, y: p_boat});
+                s0Chart.data.datasets[1].data.push({x: s0State.tick, y: p_stopper});
+                s0Chart.data.datasets[2].data.push({x: s0State.tick, y: p_total});
+                s0Chart.update();
+            }
+
+            updateS0HUD();
+            drawS0Canvas();
+            s0AnimFrame = requestAnimationFrame(s0Loop);
+        }
+
+        function updateS0HUD() {
+            const p = getS0Params();
+            const pb = -p.mBoat * s0State.boatV * 1000; 
+            const ps = p.mStopper * s0State.stopperV * 1000;
+            const total = pb + ps;
+            
+            document.getElementById('s0-p-boat').innerText = pb.toFixed(1);
+            document.getElementById('s0-p-stopper').innerText = ps.toFixed(1);
+            document.getElementById('s0-p-total').innerText = s0State.exploded ? total.toFixed(2) : "0.0";
+        }
+
+        function resizeS0Canvas() {
+            const container = document.getElementById('s0-canvas-container');
+            const canvas = document.getElementById('s0-canvas');
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            drawS0Canvas();
+        }
+
+        function drawS0Canvas() {
+            const canvas = document.getElementById('s0-canvas');
+            if(!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+
+            ctx.clearRect(0, 0, w, h);
+
+            // 배경 (물과 공기)
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(0, 0, w, h);
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.2)';
+            ctx.fillRect(0, h/2 + 20, w, h/2);
+            ctx.strokeStyle = '#38bdf8';
+            ctx.beginPath();
+            ctx.moveTo(0, h/2 + 20);
+            ctx.lineTo(w, h/2 + 20);
+            ctx.stroke();
+
+            const cx = w/2;
+            const cy = h/2;
+            
+            ctx.save();
+            ctx.translate(cx, cy);
+
+            const bx = s0State.boatX * 10;
+            // 보트
+            ctx.fillStyle = '#e2e8f0'; 
+            ctx.fillRect(-60 + bx, 10, 120, 15);
+            
+            // 시험관
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.strokeStyle = '#cbd5e1';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.roundRect(-40 + bx, -15, 80, 25, 5);
+            ctx.fill();
+            ctx.stroke();
+            
+            // 물(시험관 내부)
+            ctx.fillStyle = 'rgba(56, 189, 248, 0.5)';
+            ctx.beginPath();
+            ctx.roundRect(-38 + bx, -13, 30, 21, [5, 0, 0, 5]);
+            ctx.fill();
+
+            // 가스 생성 효과
+            if (!s0State.exploded && s0State.pressure > 0) {
+                const limit = getS0Params().limitP;
+                const ratio = Math.min(s0State.pressure / limit, 1);
+                ctx.fillStyle = `rgba(239, 68, 68, ${ratio})`;
+                ctx.fillRect(-8 + bx, -13, 46 * ratio, 21);
+                
+                ctx.fillStyle = '#fff';
+                for(let i=0; i<getS0Params().tablets*2; i++){
+                    ctx.beginPath();
+                    ctx.arc(-20 + bx + Math.random()*20, -5 + Math.random()*10, 1.5, 0, Math.PI*2);
+                    ctx.fill();
+                }
+            }
+
+            // 가스 폭발 이펙트
+            if (s0State.exploded && s0State.stopperV > 0.1) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.beginPath();
+                ctx.arc(40 + bx, -2, 15 + Math.random()*10, 0, Math.PI*2);
+                ctx.fill();
+            }
+
+            // 마개
+            const sx = s0State.exploded ? s0State.stopperX * 15 : bx;
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(40 + sx, -12, 15, 19);
+
+            // 벡터 화살표 그리기
+            if (s0State.exploded) {
+                const pb = -getS0Params().mBoat * s0State.boatV;
+                const ps = getS0Params().mStopper * s0State.stopperV;
+                // 속도가 0.05 이상일 때만 화살표 표시
+                if (Math.abs(pb) > 0.05) drawArrow(ctx, bx, -40, bx - 60, -40, '#3b82f6', `p(boat)`);
+                if (Math.abs(ps) > 0.05) drawArrow(ctx, 45 + sx, -40, 45 + sx + 60, -40, '#f97316', `p(stopper)`);
+            }
+
+            ctx.restore();
+        }
+
+        function drawArrow(ctx, x1, y1, x2, y2, color, label) {
+            const headlen = 10;
+            const angle = Math.atan2(y2-y1, x2-x1);
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x2, y2);
+            ctx.lineTo(x2 - headlen * Math.cos(angle - Math.PI / 6), y2 - headlen * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(x2 - headlen * Math.cos(angle + Math.PI / 6), y2 - headlen * Math.sin(angle + Math.PI / 6));
+            ctx.lineTo(x2, y2);
+            ctx.fill();
+            if(label){
+                ctx.font = "12px monospace";
+                ctx.fillText(label, x1 + (x2-x1)/2 - 30, y1 - 10);
+            }
+        }
+
+
+        let s1Type = 'single';
+        let s1State = { 
+            running: false, tick: 0, alt: 0, vel: 0, acc: 0, mass: 0, 
+            stage: 1, fuel1: 0, fuel2: 0, separated: false, 
+            stage1Alt: 0, stage1Vel: 0, zoomMode: 'auto' // 'auto' or 'full'
+        };
+        let s1AnimFrame;
+        let s1Charts = {};
+
+        function toggleS1Zoom() {
+            s1State.zoomMode = s1State.zoomMode === 'auto' ? 'full' : 'auto';
+            document.getElementById('s1-zoom-text').innerText = s1State.zoomMode === 'auto' ? '시점: 추적' : '시점: 전체';
+            if(!s1State.running) drawS1Canvas();
+        }
+
+        function setS1StageType(type) {
+            s1Type = type;
+            const btnS = document.getElementById('s1-btn-single');
+            const btnD = document.getElementById('s1-btn-double');
+            const p2 = document.getElementById('s1-stage2-params');
+            if(type === 'single'){
+                btnS.classList.replace('bg-space-800', 'bg-space-600');
+                btnS.classList.replace('text-slate-400', 'text-space-accent');
+                btnS.classList.add('border', 'border-space-accent');
+                btnD.classList.replace('bg-space-600', 'bg-space-800');
+                btnD.classList.replace('text-space-accent', 'text-slate-400');
+                btnD.classList.remove('border', 'border-space-accent');
+                p2.classList.add('hidden');
+            } else {
+                btnD.classList.replace('bg-space-800', 'bg-space-600');
+                btnD.classList.replace('text-slate-400', 'text-space-accent');
+                btnD.classList.add('border', 'border-space-accent');
+                btnS.classList.replace('bg-space-600', 'bg-space-800');
+                btnS.classList.replace('text-space-accent', 'text-slate-400');
+                btnS.classList.remove('border', 'border-space-accent');
+                p2.classList.remove('hidden', 'opacity-50');
+            }
+            updateS1DV();
+        }
+
+        function loadS1Preset() {
+            const v = document.getElementById('s1-preset').value;
+            if(v==='default'){
+                document.getElementById('s1-mp').value = 50; document.getElementById('s1-mf1').value = 500;
+                document.getElementById('s1-ms1').value = 100; document.getElementById('s1-ve').value = 2500;
+            } else if (v==='heavy'){
+                document.getElementById('s1-mp').value = 2000; document.getElementById('s1-mf1').value = 1000;
+                document.getElementById('s1-ms1').value = 500; document.getElementById('s1-ve').value = 2000;
+            } else if (v==='fast'){
+                document.getElementById('s1-mp').value = 10; document.getElementById('s1-mf1').value = 5000;
+                document.getElementById('s1-ms1').value = 200; document.getElementById('s1-ve').value = 4000;
+            }
+            ['s1-mp', 's1-mf1', 's1-ms1', 's1-ve'].forEach(id => {
+                document.getElementById(id).dispatchEvent(new Event('input'));
+            });
+        }
+
+        ['s1-ve', 's1-mp', 's1-mf1', 's1-ms1', 's1-mf2', 's1-ms2'].forEach(id => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                const val = e.target.value;
+                document.getElementById(id+'-val').innerText = val + (id.includes('ve') ? ' m/s' : ' kg');
+                updateS1DV();
+            });
+        });
+
+        function updateS1DV() {
+            const ve = parseFloat(document.getElementById('s1-ve').value);
+            const mp = parseFloat(document.getElementById('s1-mp').value);
+            const mf1 = parseFloat(document.getElementById('s1-mf1').value);
+            const ms1 = parseFloat(document.getElementById('s1-ms1').value);
+            const mf2 = parseFloat(document.getElementById('s1-mf2').value);
+            const ms2 = parseFloat(document.getElementById('s1-ms2').value);
+
+            let dv = 0;
+            if (s1Type === 'single') {
+                const m0 = mp + ms1 + mf1;
+                const mf = mp + ms1;
+                dv = ve * Math.log(m0 / mf);
+            } else {
+                const m0_1 = mp + ms2 + mf2 + ms1 + mf1;
+                const mf_1 = mp + ms2 + mf2 + ms1;
+                const dv1 = ve * Math.log(m0_1 / mf_1);
+                
+                const m0_2 = mp + ms2 + mf2;
+                const mf_2 = mp + ms2;
+                const dv2 = ve * Math.log(m0_2 / mf_2);
+                dv = dv1 + dv2;
+            }
+            document.getElementById('s1-calc-dv').innerText = dv.toFixed(0);
+        }
+
+        function initS1Charts() {
+            const commonOpt = {
+                responsive: true, maintainAspectRatio: false, animation: false,
+                scales: { x: { type: 'linear', position: 'bottom', title: {display:false}, grid: {color: '#334155'} }, y: { grid: {color: '#334155'} } },
+                plugins: { legend: { display: false } }
+            };
+            const ctxV = document.getElementById('s1-chart-v').getContext('2d');
+            s1Charts.v = new Chart(ctxV, { type: 'line', data: { datasets: [{ label: '속도', data: [], borderColor: '#3b82f6', borderWidth: 2, pointRadius: 0 }] }, options: {...commonOpt, scales:{...commonOpt.scales, y:{title:{display:true,text:'속도(m/s)',color:'#94a3b8'},grid:{color:'#334155'}}}}});
+            
+            const ctxA = document.getElementById('s1-chart-a').getContext('2d');
+            s1Charts.a = new Chart(ctxA, { type: 'line', data: { datasets: [{ label: '가속도', data: [], borderColor: '#f97316', borderWidth: 2, pointRadius: 0 }] }, options: {...commonOpt, scales:{...commonOpt.scales, y:{title:{display:true,text:'가속도(m/s²)',color:'#94a3b8'},grid:{color:'#334155'}}}}});
+
+            const ctxE = document.getElementById('s1-chart-e').getContext('2d');
+            s1Charts.e = new Chart(ctxE, { type: 'line', data: { datasets: [{ label: '운동E', data: [], borderColor: '#ef4444', borderWidth: 2, pointRadius: 0 }, { label: '위치E', data: [], borderColor: '#10b981', borderWidth: 2, pointRadius: 0 }] }, options: {...commonOpt, plugins:{legend:{display:true, labels:{color:'#cbd5e1'}}}, scales:{...commonOpt.scales, y:{title:{display:true,text:'에너지(MJ)',color:'#94a3b8'},grid:{color:'#334155'}}}}});
+        }
+
+        function resetS1Sim() {
+            if(s1AnimFrame) cancelAnimationFrame(s1AnimFrame);
+            s1State = { running: false, tick: 0, alt: 0, vel: 0, acc: 0, mass: 0, stage: 1, fuel1: 0, fuel2: 0, separated: false, stage1Alt: 0, stage1Vel: 0, zoomMode: s1State.zoomMode };
+            
+            if(s1Charts.v) {
+                s1Charts.v.data.datasets[0].data = []; s1Charts.v.update();
+                s1Charts.a.data.datasets[0].data = []; s1Charts.a.update();
+                s1Charts.e.data.datasets[0].data = []; s1Charts.e.data.datasets[1].data = []; s1Charts.e.update();
+            }
+            updateS1HUD();
+            drawS1Canvas();
+        }
+
+        function startS1Sim() {
+            resetS1Sim();
+            const mp = parseFloat(document.getElementById('s1-mp').value);
+            const mf1 = parseFloat(document.getElementById('s1-mf1').value);
+            const ms1 = parseFloat(document.getElementById('s1-ms1').value);
+            s1State.fuel1 = mf1;
+            
+            if (s1Type === 'double') {
+                s1State.fuel2 = parseFloat(document.getElementById('s1-mf2').value);
+                s1State.mass = mp + ms1 + mf1 + s1State.fuel2 + parseFloat(document.getElementById('s1-ms2').value);
+            } else {
+                s1State.mass = mp + ms1 + mf1;
+            }
+            s1State.running = true;
+            s1Loop();
+        }
+
+        function s1Loop() {
+            if (!s1State.running) return;
+            const dt = 0.1;
+            s1State.tick += 1;
+
+            const ve = parseFloat(document.getElementById('s1-ve').value);
+            const dm = 100; // mass flow rate kg/s
+            let thrust = 0;
+            let currentMass = s1State.mass;
+
+            // 1단 추락 로직
+            if (s1State.separated) {
+                s1State.stage1Vel -= 9.8 * dt;
+                s1State.stage1Alt += s1State.stage1Vel * dt;
+                if (s1State.stage1Alt < 0) { s1State.stage1Alt = 0; s1State.stage1Vel = 0; }
+            }
+
+            if (s1State.stage === 1) {
+                if (s1State.fuel1 > 0) {
+                    const burn = Math.min(dm * dt, s1State.fuel1);
+                    s1State.fuel1 -= burn;
+                    currentMass -= burn;
+                    thrust = (burn / dt) * ve;
+                } else if (s1Type === 'double' && !s1State.separated) {
+                    s1State.separated = true;
+                    s1State.stage = 2;
+                    s1State.stage1Alt = s1State.alt;
+                    s1State.stage1Vel = s1State.vel;
+                    const ms1 = parseFloat(document.getElementById('s1-ms1').value);
+                    currentMass -= ms1; 
+                }
+            } else if (s1State.stage === 2) {
+                if (s1State.fuel2 > 0) {
+                    const burn = Math.min(dm * dt, s1State.fuel2);
+                    s1State.fuel2 -= burn;
+                    currentMass -= burn;
+                    thrust = (burn / dt) * ve;
+                }
+            }
+            s1State.mass = currentMass;
+
+            const r_earth = 6371000; // 지구 반지름 (m)
+            const current_g = 9.8 * Math.pow(r_earth / (r_earth + s1State.alt), 2);
+
+            if (s1State.alt <= 0 && thrust/currentMass < current_g) {
+                s1State.acc = 0; s1State.vel = 0; s1State.alt = 0;
+            } else {
+                s1State.acc = thrust/currentMass - current_g; // Thrust - Gravity
+                s1State.vel += s1State.acc * dt;
+                s1State.alt += s1State.vel * dt;
+                if (s1State.alt < 0) s1State.alt = 0; 
+            }
+
+            if (s1State.tick % 5 === 0 && s1Charts.v) {
+                s1Charts.v.data.datasets[0].data.push({x: s1State.tick, y: s1State.vel}); s1Charts.v.update();
+                s1Charts.a.data.datasets[0].data.push({x: s1State.tick, y: s1State.acc}); s1Charts.a.update();
+                const ke = 0.5 * currentMass * s1State.vel * s1State.vel / 1e6;
+                const pe = currentMass * 9.8 * s1State.alt / 1e6;
+                s1Charts.e.data.datasets[0].data.push({x: s1State.tick, y: ke});
+                s1Charts.e.data.datasets[1].data.push({x: s1State.tick, y: pe}); s1Charts.e.update();
+            }
+
+            updateS1HUD();
+            drawS1Canvas();
+
+            // 종료 조건: 땅에 떨어짐
+            if(s1State.alt === 0 && s1State.tick > 20) s1State.running = false;
+            if(s1State.running) s1AnimFrame = requestAnimationFrame(s1Loop);
+        }
+
+        function updateS1HUD() {
+            document.getElementById('s1-hud-h').innerText = Math.round(s1State.alt) + " m";
+            document.getElementById('s1-hud-v').innerText = s1State.vel.toFixed(1) + " m/s";
+            document.getElementById('s1-hud-a').innerText = s1State.acc.toFixed(1) + " m/s²";
+            document.getElementById('s1-hud-m').innerText = Math.round(s1State.mass) + " kg";
+        }
+
+        function resizeS1Canvas() {
+            const container = document.getElementById('s1-canvas-container');
+            const canvas = document.getElementById('s1-canvas');
+            if(!container || !canvas) return;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            drawS1Canvas();
+        }
+
+        function drawS1Canvas() {
+            const canvas = document.getElementById('s1-canvas');
+            if(!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+
+            // 동적 배경 그라데이션 (대기권 돌파 시각화)
+            const altKm = s1State.alt / 1000;
+            const atm = Math.max(0, 1 - altKm / 100); // 100km 이상에서 0 (우주)
+            
+            // Top Color (Darker)
+            const tr = Math.floor(2 * (1 - atm) + 14 * atm);
+            const tg = Math.floor(6 * (1 - atm) + 52 * atm);
+            const tb = Math.floor(23 * (1 - atm) + 138 * atm);
+            
+            // Bottom Color (Lighter)
+            const br = Math.floor(5 * (1 - atm) + 135 * atm);
+            const bg = Math.floor(10 * (1 - atm) + 206 * atm);
+            const bb = Math.floor(15 * (1 - atm) + 235 * atm);
+
+            const grad = ctx.createLinearGradient(0, 0, 0, h);
+            grad.addColorStop(0, `rgb(${tr}, ${tg}, ${tb})`);
+            grad.addColorStop(1, `rgb(${br}, ${bg}, ${bb})`);
+            
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, w, h);
+
+            // 우주 배경 입자 (별) - 대기권 밖으로 나갈수록 선명해짐
+            const starAlpha = Math.max(0, (altKm - 30) / 70); 
+            if (starAlpha > 0) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${starAlpha})`;
+                for (let i = 0; i < 30; i++) {
+                    const sx = (i * 97) % w; const sy = (i * 43) % h;
+                    ctx.fillRect(sx, sy, 1, 1);
+                }
+            }
+
+            let scale = 1.0;
+            let ry, groundY;
+            
+            if (s1State.zoomMode === 'auto') {
+                if (s1State.alt < 300) { 
+                    ry = (h - 100) - (s1State.alt / 300) * (h/2 - 100);
+                    groundY = h - 50;
+                } else { 
+                    scale = 300 / s1State.alt;
+                    if (scale < 0.1) scale = 0.1; 
+                    ry = h / 2;
+                    groundY = ry + (s1State.alt * scale); 
+                }
+            } else { // full zoom mode
+                const maxViewAlt = Math.max(1000, s1State.alt * 1.2);
+                scale = (h - 100) / maxViewAlt;
+                groundY = h - 20;
+                ry = groundY - (s1State.alt * scale);
+            }
+
+            // Draw Ground
+            if (groundY < h + 100) {
+                ctx.fillStyle = '#1e293b'; ctx.fillRect(0, groundY, w, h);
+                ctx.fillStyle = '#10b981'; ctx.fillRect(0, groundY, w, 4);
+            }
+
+            // 대기권 경계선 그리기
+            const boundaries = [
+                { name: "대류권 계면 (12km)", h: 12000 },
+                { name: "성층권 계면 (50km)", h: 50000 },
+                { name: "중간권 계면 (85km)", h: 85000 },
+                { name: "열권 한계 / 외기권 시작 (600km)", h: 600000 }
+            ];
+
+            boundaries.forEach(b => {
+                const lineY = groundY - (b.h * scale);
+                // 화면 범위 내에 있을 때만 그리기 (성능 최적화)
+                if (lineY > -100 && lineY < h + 100) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, lineY);
+                    ctx.lineTo(w, lineY);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                    ctx.lineWidth = 1;
+                    ctx.setLineDash([4, 4]);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    
+                    ctx.fillStyle = 'rgba(148, 163, 184, 0.9)'; // 텍스트 색상 (slate-400)
+                    ctx.font = '11px "Inter", sans-serif';
+                    ctx.fillText(b.name, 10, lineY - 5);
+                }
+            });
+
+            const rx = w / 2;
+            
+            // Draw Separated Stage 1
+            if (s1State.separated) {
+                ctx.save();
+                let s1Y = s1State.zoomMode === 'auto' ? groundY - (s1State.stage1Alt * scale) : h - 20 - (s1State.stage1Alt * scale);
+                ctx.translate(rx, s1Y);
+                ctx.scale(Math.max(scale, 0.4), Math.max(scale, 0.4));
+                
+                ctx.fillStyle = '#94a3b8'; // 1단 본체 색상
+                ctx.fillRect(-11, -15, 22, 40); // 중심점을 위로 당김
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(-11, -15, 22, 2);
+                // 엔진 노즐
+                ctx.fillStyle = '#64748b';
+                ctx.beginPath(); ctx.moveTo(-10, 25); ctx.lineTo(-15, 35); ctx.lineTo(-10, 35); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(10, 25); ctx.lineTo(15, 35); ctx.lineTo(10, 35); ctx.fill();
+                ctx.restore();
+            }
+
+            // Draw Main Rocket (Stage 1 or Stage 2)
+            ctx.save();
+            ctx.translate(rx, ry);
+            ctx.scale(Math.max(scale, 0.4), Math.max(scale, 0.4));
+
+            const isBurning = (s1State.stage === 1 && s1State.fuel1 > 0) || (s1State.stage === 2 && s1State.fuel2 > 0);
+            if (isBurning && s1State.running) {
+                const flameH = 30 + Math.random() * 20;
+                ctx.beginPath(); ctx.moveTo(-6, 25); ctx.lineTo(0, 25 + flameH); ctx.lineTo(6, 25);
+                ctx.fillStyle = '#f97316'; ctx.fill();
+                ctx.beginPath(); ctx.moveTo(-3, 25); ctx.lineTo(0, 25 + flameH * 0.6); ctx.lineTo(3, 25);
+                ctx.fillStyle = '#fef08a'; ctx.fill();
+            }
+
+            // 2단 (또는 단일단) 본체
+            ctx.fillStyle = '#e2e8f0';
+            ctx.fillRect(-10, -30, 20, 55); 
+            // 꼬깔 콘
+            ctx.beginPath(); ctx.moveTo(-10, -30); ctx.lineTo(0, -45); ctx.lineTo(10, -30);
+            ctx.fillStyle = '#ef4444'; ctx.fill();
+
+            // 1단 결합 상태 시
+            if (s1Type === 'double' && !s1State.separated) {
+                ctx.fillStyle = '#94a3b8';
+                ctx.fillRect(-11, 25, 22, 30);
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(-11, 23, 22, 2);
+                
+                // 1단 날개
+                ctx.fillStyle = '#64748b';
+                ctx.beginPath(); ctx.moveTo(-11, 40); ctx.lineTo(-18, 55); ctx.lineTo(-11, 55); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(11, 40); ctx.lineTo(18, 55); ctx.lineTo(11, 55); ctx.fill();
+            } else {
+                // 단일단 날개 (혹은 2단만 남았을때)
+                ctx.fillStyle = '#64748b';
+                ctx.beginPath(); ctx.moveTo(-10, 10); ctx.lineTo(-16, 25); ctx.lineTo(-10, 25); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(10, 10); ctx.lineTo(16, 25); ctx.lineTo(10, 25); ctx.fill();
+            }
+
+            ctx.restore();
+        }
+
+        const EARTH_R = 6371; 
+        const G_MU = 398600; 
+
+        let s2State = {
+            running: false, tick: 0, x: 0, y: EARTH_R, vx: 0, vy: 0,
+            stage: 1, mass: 0, f1: 0, f2: 0, f3: 0, traj: [], debris: [], status: 'idle', maxAlt: 0, maxVel: 0, loss: 0, zoomMode: 'rocket',
+            leoReported: false, escapeReported: false
+        };
+        let s2AnimFrame;
+
+        function toggleS2Zoom() {
+            s2State.zoomMode = s2State.zoomMode === 'rocket' ? 'earth' : 'rocket';
+            document.getElementById('s2-zoom-text').innerText = s2State.zoomMode === 'rocket' ? '시점: 로켓 추적' : '시점: 지구 전체';
+            if(!s2State.running) drawS2Canvas();
+        }
+
+        function loadS2Preset() {
+            const v = document.getElementById('s2-preset').value;
+            const setV = (id, val) => { document.getElementById(id).value = val; document.getElementById(id).dispatchEvent(new Event('input')); };
+            
+            if(v === 'fail') { 
+                setV('s2-mf1', 150); setV('s2-ms1', 60); setV('s2-ve1', 2.0); 
+                setV('s2-mf2', 30); setV('s2-ms2', 20); setV('s2-ve2', 2.2); 
+                setV('s2-mf3', 10); setV('s2-ms3', 10); setV('s2-ve3', 2.5);
+            }
+            if(v === 'nuri') { // 누리호 근사 제원
+                setV('s2-mf1', 111); setV('s2-ms1', 19); setV('s2-ve1', 2.9); 
+                setV('s2-mf2', 35); setV('s2-ms2', 8); setV('s2-ve2', 3.0); 
+                setV('s2-mf3', 10); setV('s2-ms3', 3); setV('s2-ve3', 3.2); 
+            }
+            if(v === 'escape') { // 아폴로 11호 (새턴 V) - 심우주 탈출
+                setV('s2-mf1', 2160); setV('s2-ms1', 130); setV('s2-ve1', 2.8); 
+                setV('s2-mf2', 456); setV('s2-ms2', 40); setV('s2-ve2', 4.2); 
+                setV('s2-mf3', 109); setV('s2-ms3', 45); setV('s2-ve3', 4.2); 
+            }
+        }
+
+        ['s2-mf1','s2-ms1','s2-ve1','s2-mf2','s2-ms2','s2-ve2','s2-mf3','s2-ms3','s2-ve3'].forEach(id => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                const val = e.target.value;
+                document.getElementById(id+'-val').innerText = val + (id.includes('ve') ? ' km/s' : ' t');
+                calcS2TheoryDV();
+            });
+        });
+
+        function calcS2TheoryDV() {
+            const getV = (id) => parseFloat(document.getElementById(id).value);
+            const mf1=getV('s2-mf1'), ms1=getV('s2-ms1'), ve1=getV('s2-ve1');
+            const mf2=getV('s2-mf2'), ms2=getV('s2-ms2'), ve2=getV('s2-ve2');
+            const mf3=getV('s2-mf3'), ms3=getV('s2-ms3'), ve3=getV('s2-ve3');
+
+            const m0_1 = mf1+ms1 + mf2+ms2 + mf3+ms3;
+            const mf_1 = ms1 + mf2+ms2 + mf3+ms3;
+            const dv1 = ve1 * Math.log(m0_1 / mf_1);
+
+            const m0_2 = mf2+ms2 + mf3+ms3;
+            const mf_2 = ms2 + mf3+ms3;
+            const dv2 = ve2 * Math.log(m0_2 / mf_2);
+
+            const m0_3 = mf3+ms3;
+            const mf_3 = ms3;
+            const dv3 = ve3 * Math.log(m0_3 / mf_3);
+
+            document.getElementById('s2-theory-dv').innerText = (dv1 + dv2 + dv3).toFixed(2);
+        }
+
+        function resetS2Sim() {
+            if(s2AnimFrame) cancelAnimationFrame(s2AnimFrame);
+            s2State = { running: false, tick: 0, x: 0, y: EARTH_R, vx: 0, vy: 0, stage: 1, mass: 0, f1: 0, f2: 0, f3: 0, traj: [], debris: [], status: 'idle', maxAlt:0, maxVel:0, loss:0, zoomMode: s2State.zoomMode, leoReported: false, escapeReported: false };
+            document.getElementById('s2-report').classList.add('hidden');
+            document.getElementById('s2-status-badge').className = "px-2 py-0.5 rounded text-[11px] font-bold bg-slate-700 text-white shadow";
+            document.getElementById('s2-status-badge').innerText = "대기 중";
+            updateS2HUD();
+            drawS2Canvas();
+        }
+
+        function startS2Sim() {
+            resetS2Sim();
+            const getV = (id) => parseFloat(document.getElementById(id).value);
+            s2State.f1 = getV('s2-mf1'); s2State.f2 = getV('s2-mf2'); s2State.f3 = getV('s2-mf3');
+            s2State.mass = s2State.f1 + getV('s2-ms1') + s2State.f2 + getV('s2-ms2') + s2State.f3 + getV('s2-ms3');
+            s2State.running = true;
+            s2State.status = 'flight';
+            document.getElementById('s2-status-badge').innerText = "1단 연소 중";
+            document.getElementById('s2-status-badge').className = "px-2 py-0.5 rounded text-[11px] font-bold bg-orange-500 text-white shadow";
+            s2Loop();
+        }
+
+        function s2Loop() {
+            if (!s2State.running) return;
+
+            const dt = 1; 
+            s2State.tick += 1;
+
+            const getV = (id) => parseFloat(document.getElementById(id).value);
+            const ve1 = getV('s2-ve1'), ve2 = getV('s2-ve2'), ve3 = getV('s2-ve3');
+            const ms1 = getV('s2-ms1'), ms2 = getV('s2-ms2');
+            
+            // 로켓 스케일에 비례하도록 스테이지별 연료 소모율(dm) 동적 계산 (TWR 유지)
+            let dm = 1.0;
+            if (s2State.stage === 1) dm = Math.max(0.1, getV('s2-mf1') / 120); // 1단 연소시간 약 120초
+            else if (s2State.stage === 2) dm = Math.max(0.1, getV('s2-mf2') / 150); // 2단 연소시간 약 150초
+            else if (s2State.stage === 3) dm = Math.max(0.1, getV('s2-mf3') / 250); // 3단 연소시간 약 250초
+
+            let thrustAcc = 0;
+            let currentMass = s2State.mass;
+
+            // 3단 로켓 연소 로직
+            if (s2State.stage === 1) {
+                if (s2State.f1 > 0) {
+                    const burn = Math.min(dm * dt, s2State.f1);
+                    s2State.f1 -= burn; currentMass -= burn;
+                    thrustAcc = ((burn/dt) * ve1) / currentMass;
+                } else {
+                    // 1단 분리: 잔해물 배열에 현재 상태 저장
+                    s2State.debris.push({stage: 1, x: s2State.x, y: s2State.y, vx: s2State.vx, vy: s2State.vy, mass: ms1});
+                    s2State.stage = 2; currentMass -= ms1; 
+                    document.getElementById('s2-status-badge').innerText = "2단 연소 중";
+                    document.getElementById('s2-status-badge').className = "px-2 py-0.5 rounded text-[11px] font-bold bg-blue-500 text-white shadow";
+                }
+            } else if (s2State.stage === 2) {
+                if (s2State.f2 > 0) {
+                    const burn = Math.min(dm * dt, s2State.f2);
+                    s2State.f2 -= burn; currentMass -= burn;
+                    thrustAcc = ((burn/dt) * ve2) / currentMass;
+                } else {
+                    // 2단 분리: 잔해물 배열에 현재 상태 저장
+                    s2State.debris.push({stage: 2, x: s2State.x, y: s2State.y, vx: s2State.vx, vy: s2State.vy, mass: ms2});
+                    s2State.stage = 3; currentMass -= ms2;
+                    document.getElementById('s2-status-badge').innerText = "3단 연소 중";
+                    document.getElementById('s2-status-badge').className = "px-2 py-0.5 rounded text-[11px] font-bold bg-green-500 text-white shadow";
+                }
+            } else if (s2State.stage === 3) {
+                if (s2State.f3 > 0) {
+                    const burn = Math.min(dm * dt, s2State.f3);
+                    s2State.f3 -= burn; currentMass -= burn;
+                    thrustAcc = ((burn/dt) * ve3) / currentMass;
+                } else {
+                    document.getElementById('s2-status-badge').innerText = "관성 비행";
+                    document.getElementById('s2-status-badge').className = "px-2 py-0.5 rounded text-[11px] font-bold bg-slate-500 text-white shadow";
+                }
+            }
+            s2State.mass = currentMass;
+
+            const rSq = s2State.x*s2State.x + s2State.y*s2State.y;
+            const r = Math.sqrt(rSq);
+            const g = G_MU / rSq; 
+            const alt = r - EARTH_R;
+            
+            // Gravity turn pitch
+            let tx=0, ty=0;
+            if (thrustAcc > 0) {
+                // 부드러운 중력 턴 (Gravity Turn): 고도 0에서는 수직(1), 고도 400km 부근에서 완전 수평(0)이 되도록 조절
+                let pitch = Math.max(0, 1 - (alt / 400)); 
+                
+                // 기존의 2단 분리 시 억지로 수평으로 꺾던 오류 코드 제거
+                // if(s2State.stage >= 2) pitch = 0; 
+                
+                const unitX = s2State.x / r;
+                const unitY = s2State.y / r;
+                const tanX = unitY; 
+                const tanY = -unitX;
+
+                tx = thrustAcc * (unitX * pitch + tanX * (1-pitch));
+                ty = thrustAcc * (unitY * pitch + tanY * (1-pitch));
+            }
+
+            // 대기권 저항
+            let dragAcc = 0;
+            if (alt < 100) {
+                const velSq = s2State.vx*s2State.vx + s2State.vy*s2State.vy;
+                const rho = Math.exp(-alt / 8); 
+                dragAcc = (rho * velSq * 0.0005) / currentMass; 
+                s2State.loss += dragAcc * dt;
+            }
+
+            const gx = -g * (s2State.x / r);
+            const gy = -g * (s2State.y / r);
+            
+            const vUnit = Math.sqrt(s2State.vx**2 + s2State.vy**2) || 1;
+            const dx = -(s2State.vx/vUnit) * dragAcc;
+            const dy = -(s2State.vy/vUnit) * dragAcc;
+
+            s2State.vx += (gx + tx + dx) * dt;
+            s2State.vy += (gy + ty + dy) * dt;
+            s2State.x += s2State.vx * dt;
+            s2State.y += s2State.vy * dt;
+
+            // 분리된 단(잔해물) 물리 시뮬레이션
+            for (let i = s2State.debris.length - 1; i >= 0; i--) {
+                let d = s2State.debris[i];
+                let rSq = d.x*d.x + d.y*d.y;
+                let r = Math.sqrt(rSq);
+                
+                // 지표면에 추락하면 배열에서 삭제
+                if (r <= EARTH_R) { 
+                    s2State.debris.splice(i, 1);
+                    continue;
+                }
+                
+                let dg = G_MU / rSq;
+                let dgx = -dg * (d.x / r);
+                let dgy = -dg * (d.y / r);
+
+                let dAlt = r - EARTH_R;
+                let dDrag = 0;
+                
+                // 잔해물은 추력이 없고 빈 껍데기(구조 질량)라 공기 저항을 상대적으로 더 크게 받음
+                if (dAlt < 100) { 
+                    let vSq = d.vx*d.vx + d.vy*d.vy;
+                    let rho = Math.exp(-dAlt / 8); 
+                    dDrag = (rho * vSq * 0.002) / d.mass; 
+                }
+                
+                let dvUnit = Math.sqrt(d.vx*d.vx + d.vy*d.vy) || 1;
+                let ddx = -(d.vx/dvUnit) * dDrag;
+                let ddy = -(d.vy/dvUnit) * dDrag;
+
+                d.vx += (dgx + ddx) * dt;
+                d.vy += (dgy + ddy) * dt;
+                d.x += d.vx * dt;
+                d.y += d.vy * dt;
+            }
+
+            if (s2State.tick % 5 === 0) {
+                s2State.traj.push({x: s2State.x, y: s2State.y});
+                if(s2State.traj.length > 800) s2State.traj.shift(); 
+            }
+
+            const v = Math.sqrt(s2State.vx**2 + s2State.vy**2);
+            s2State.maxAlt = Math.max(s2State.maxAlt, alt);
+            s2State.maxVel = Math.max(s2State.maxVel, v);
+            if(thrustAcc > 0) s2State.loss += g * dt; // 중력 손실 누적
+
+            // 종료/성공 판단 로직
+            if (r <= EARTH_R && s2State.tick > 10) {
+                s2State.status = 'crash'; s2State.running = false; // 추락은 시뮬레이션 종료
+                showS2Report("지구 추락", "로켓이 지표면으로 추락했습니다. 더 많은 추진력이 필요합니다.", "text-red-500");
+            } else if (v >= 11.2 && !s2State.escapeReported) {
+                s2State.status = 'escape';
+                s2State.escapeReported = true; // 팝업은 한 번만 띄우고 시뮬레이션은 계속 진행
+                showS2Report("지구 탈출 성공!", "제2우주속도 도달! 심우주 탐사(아폴로 11호 달 착륙 등)가 가능합니다.", "text-orange-400");
+            } else if (s2State.f1 === 0 && s2State.f2 === 0 && s2State.f3 === 0) {
+                if (v >= 7.6 && alt > 200 && !s2State.leoReported) {
+                    s2State.status = 'orbit'; 
+                    s2State.leoReported = true; // 팝업은 한 번만 띄우고 시뮬레이션은 계속 진행
+                    document.getElementById('s2-status-badge').innerText = "궤도 진입 완료";
+                    document.getElementById('s2-status-badge').className = "px-2 py-0.5 rounded text-[11px] font-bold bg-green-500 text-white shadow";
+                    showS2Report("저궤도 진입 (LEO)", "제1우주속도 도달! 궤도에 안착하여 계속 비행합니다.", "text-green-400");
+                }
+            }
+
+            if(s2State.tick % 2 === 0) updateS2HUD();
+            drawS2Canvas();
+
+            if (s2State.running) s2AnimFrame = requestAnimationFrame(s2Loop);
+        }
+
+        function updateS2HUD() {
+            const v = Math.sqrt(s2State.vx**2 + s2State.vy**2);
+            const r = Math.sqrt(s2State.x**2 + s2State.y**2);
+            const alt = r - EARTH_R;
+
+            document.getElementById('s2-hud-v').innerText = v.toFixed(2) + " km/s";
+            document.getElementById('s2-hud-h').innerText = Math.round(alt) + " km";
+            document.getElementById('s2-hud-m').innerText = s2State.mass.toFixed(1) + " t";
+
+            const getV = (id) => parseFloat(document.getElementById(id).value);
+            const pct1 = Math.max(0, (s2State.f1 / getV('s2-mf1')) * 100);
+            const pct2 = Math.max(0, (s2State.f2 / getV('s2-mf2')) * 100);
+            const pct3 = Math.max(0, (s2State.f3 / getV('s2-mf3')) * 100);
+            
+            document.getElementById('s2-hud-f1').innerText = Math.round(pct1) + "%"; document.getElementById('s2-bar-f1').style.width = pct1 + "%";
+            document.getElementById('s2-hud-f2').innerText = Math.round(pct2) + "%"; document.getElementById('s2-bar-f2').style.width = pct2 + "%";
+            document.getElementById('s2-hud-f3').innerText = Math.round(pct3) + "%"; document.getElementById('s2-bar-f3').style.width = pct3 + "%";
+        }
+
+        function showS2Report(title, subtitle, colorClass) {
+            document.getElementById('s2-report').classList.remove('hidden');
+            document.getElementById('s2-rep-title').innerText = title;
+            document.getElementById('s2-rep-title').className = `text-xl font-bold mb-1 ${colorClass}`;
+            document.getElementById('s2-rep-subtitle').innerText = subtitle;
+            
+            document.getElementById('s2-rep-hmax').innerText = Math.round(s2State.maxAlt) + " km";
+            document.getElementById('s2-rep-vmax').innerText = s2State.maxVel.toFixed(2) + " km/s";
+            document.getElementById('s2-rep-loss').innerText = s2State.loss.toFixed(2) + " km/s";
+        }
+
+        function resizeS2Canvas() {
+            const container = document.getElementById('s2-canvas-container');
+            const canvas = document.getElementById('s2-canvas');
+            if(!container || !canvas) return;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            drawS2Canvas();
+        }
+
+        function drawS2Canvas() {
+            const canvas = document.getElementById('s2-canvas');
+            if(!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+
+            const cx = w / 2;
+            const cy = h / 2;
+
+            const altKm = Math.max(0, Math.sqrt(s2State.x**2 + s2State.y**2) - EARTH_R);
+
+            // 동적 배경 그라데이션 (대기권 돌파 시각화)
+            if (s2State.zoomMode === 'rocket') {
+                const atm = Math.max(0, 1 - altKm / 100); // 100km 이상에서 0 (우주)
+                
+                // Top Color (Darker)
+                const tr = Math.floor(2 * (1 - atm) + 14 * atm);
+                const tg = Math.floor(6 * (1 - atm) + 52 * atm);
+                const tb = Math.floor(23 * (1 - atm) + 138 * atm);
+                
+                // Bottom Color (Lighter)
+                const br = Math.floor(5 * (1 - atm) + 135 * atm);
+                const bg = Math.floor(10 * (1 - atm) + 206 * atm);
+                const bb = Math.floor(15 * (1 - atm) + 235 * atm);
+
+                const grad = ctx.createLinearGradient(0, 0, 0, h);
+                grad.addColorStop(0, `rgb(${tr}, ${tg}, ${tb})`);
+                grad.addColorStop(1, `rgb(${br}, ${bg}, ${bb})`);
+                
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, w, h);
+            } else {
+                ctx.fillStyle = '#020617'; // 완전한 우주 검은색
+                ctx.fillRect(0, 0, w, h);
+            }
+
+            // 우주 배경 입자 (별) - 대기권 밖으로 나갈수록 선명해짐
+            const starAlpha = s2State.zoomMode === 'earth' ? 1.0 : Math.max(0, (altKm - 30) / 70); 
+            if (starAlpha > 0) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${starAlpha})`;
+                for (let i = 0; i < 30; i++) {
+                    const sx = (i * 97) % w; const sy = (i * 43) % h;
+                    ctx.fillRect(sx, sy, 1, 1);
+                }
+            }
+
+            let maxDist = EARTH_R + 500; 
+            if (s2State.status !== 'idle' && s2State.zoomMode === 'earth') {
+                const r = Math.sqrt(s2State.x*s2State.x + s2State.y*s2State.y);
+                maxDist = Math.max(maxDist, r * 1.5);
+            }
+            let scale = (Math.min(w, h) * 0.45) / maxDist;
+            
+            // 로켓 추적 모드일 경우 크게 확대
+            if (s2State.zoomMode === 'rocket') {
+                scale = Math.min(2.0, (Math.min(w, h) * 0.45) / 1000); // 일정 비율로 확대
+            }
+
+            // 우주 배경 입자
+            ctx.fillStyle = '#ffffff';
+            for (let i = 0; i < 30; i++) {
+                const sx = (i * 97) % w; const sy = (i * 43) % h;
+                ctx.fillRect(sx, sy, 1, 1);
+            }
+
+            // 시점 좌표 계산 (지구 중심 좌표)
+            let drawCx = cx;
+            let drawCy = cy;
+            if (s2State.zoomMode === 'rocket' && s2State.status !== 'idle') {
+                // 지구 중심을 로켓 반대편으로 밀어냄
+                drawCx = cx - s2State.x * scale;
+                drawCy = cy + s2State.y * scale; 
+            }
+
+            // 지구 그리기
+            const eRadPx = EARTH_R * scale;
+            ctx.beginPath();
+            ctx.arc(drawCx, drawCy, eRadPx, 0, 2 * Math.PI);
+            const grd = ctx.createRadialGradient(drawCx, drawCy, eRadPx*0.5, drawCx, drawCy, eRadPx);
+            grd.addColorStop(0, '#1d4ed8'); grd.addColorStop(1, '#1e3a8a');
+            ctx.fillStyle = grd; ctx.fill();
+            ctx.strokeStyle = '#3b82f6'; ctx.lineWidth = 1; ctx.stroke();
+
+            // 대기권 및 궤도 가이드선
+            ctx.beginPath(); ctx.arc(drawCx, drawCy, (EARTH_R + 100) * scale, 0, 2 * Math.PI);
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.3)'; ctx.lineWidth = 2; ctx.stroke();
+            ctx.beginPath(); ctx.arc(drawCx, drawCy, (EARTH_R + 400) * scale, 0, 2 * Math.PI);
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.2)'; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]);
+
+            // 비행 궤적
+            if (s2State.traj.length > 1) {
+                ctx.beginPath();
+                for (let i = 0; i < s2State.traj.length; i++) {
+                    const pt = s2State.traj[i];
+                    const px = drawCx + pt.x * scale;
+                    const py = drawCy - pt.y * scale; 
+                    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                }
+                ctx.strokeStyle = '#f97316'; ctx.lineWidth = 1.5; ctx.stroke();
+            }
+
+            // 줌 아웃(earth) 모드일때는 로켓이 안보이므로 일정 크기 강제 확대
+            const rScale = s2State.zoomMode === 'earth' ? 0.5 : 1.0;
+
+            // 분리된 잔해물 렌더링
+            s2State.debris.forEach(d => {
+                const dx = drawCx + d.x * scale;
+                const dy = drawCy - d.y * scale;
+                const dAngle = Math.atan2(-d.vy, d.vx);
+
+                ctx.save();
+                ctx.translate(dx, dy);
+                ctx.rotate(dAngle + Math.PI/2);
+                ctx.scale(rScale, rScale);
+                
+                // 단 분리 시 뒤로 서서히 멀어지며 그려짐
+                if (d.stage === 1) {
+                    ctx.fillStyle = '#94a3b8'; ctx.fillRect(-6, -6, 12, 12);
+                    ctx.fillStyle = '#ef4444'; ctx.fillRect(-6, -6, 12, 1.5);
+                    ctx.fillStyle = '#64748b';
+                    ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-10, 6); ctx.lineTo(-6, 6); ctx.fill(); 
+                    ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(10, 6); ctx.lineTo(6, 6); ctx.fill(); 
+                } else if (d.stage === 2) {
+                    ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-5, -6, 10, 12);
+                    ctx.fillStyle = '#ef4444'; ctx.fillRect(-5, -6, 10, 1.5); 
+                    ctx.fillStyle = '#64748b';
+                    ctx.beginPath(); ctx.moveTo(-5, 0); ctx.lineTo(-8, 6); ctx.lineTo(-5, 6); ctx.fill(); 
+                    ctx.beginPath(); ctx.moveTo(5, 0); ctx.lineTo(8, 6); ctx.lineTo(5, 6); ctx.fill(); 
+                }
+                ctx.restore();
+            });
+
+            // 로켓 메인 본체 그리기 좌표
+            const rx = s2State.status === 'idle' ? drawCx : drawCx + s2State.x * scale;
+            const ry = s2State.status === 'idle' ? drawCy - EARTH_R * scale : drawCy - s2State.y * scale;
+            const angle = s2State.status === 'idle' ? 0 : Math.atan2(-s2State.vy, s2State.vx);
+
+            ctx.save();
+            ctx.translate(rx, ry);
+            ctx.rotate(angle + Math.PI/2); // 진행방향으로 회전
+            
+            ctx.scale(rScale, rScale);
+
+            // 로켓 불꽃
+            const isBurning = s2State.running && ((s2State.stage === 1 && s2State.f1 > 0) || (s2State.stage === 2 && s2State.f2 > 0) || (s2State.stage === 3 && s2State.f3 > 0));
+            if (isBurning) {
+                ctx.beginPath(); ctx.moveTo(-4, 18); ctx.lineTo(0, 30 + Math.random()*15); ctx.lineTo(4, 18);
+                ctx.fillStyle = '#f97316'; ctx.fill();
+                ctx.beginPath(); ctx.moveTo(-2, 18); ctx.lineTo(0, 22 + Math.random()*8); ctx.lineTo(2, 18);
+                ctx.fillStyle = '#fef08a'; ctx.fill();
+            }
+
+            // 3단 (탑재체 모듈)
+            ctx.fillStyle = '#e2e8f0'; ctx.fillRect(-4, -18, 8, 12); 
+            ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.moveTo(-4, -18); ctx.lineTo(0, -26); ctx.lineTo(4, -18); ctx.fill();
+            
+            // 2단 부스터
+            if (s2State.stage <= 2) {
+                ctx.fillStyle = '#cbd5e1'; ctx.fillRect(-5, -6, 10, 12);
+                ctx.fillStyle = '#ef4444'; ctx.fillRect(-5, -6, 10, 1.5); // 단 분리선
+            }
+            
+            // 1단 부스터
+            if (s2State.stage === 1) {
+                ctx.fillStyle = '#94a3b8'; ctx.fillRect(-6, 6, 12, 12);
+                ctx.fillStyle = '#ef4444'; ctx.fillRect(-6, 6, 12, 1.5); // 단 분리선
+                // 날개
+                ctx.fillStyle = '#64748b';
+                ctx.beginPath(); ctx.moveTo(-6, 12); ctx.lineTo(-10, 18); ctx.lineTo(-6, 18); ctx.fill(); 
+                ctx.beginPath(); ctx.moveTo(6, 12); ctx.lineTo(10, 18); ctx.lineTo(6, 18); ctx.fill(); 
+            } else if (s2State.stage === 2) {
+                // 2단 비행시 날개 (소형)
+                ctx.fillStyle = '#64748b';
+                ctx.beginPath(); ctx.moveTo(-5, 0); ctx.lineTo(-8, 6); ctx.lineTo(-5, 6); ctx.fill(); 
+                ctx.beginPath(); ctx.moveTo(5, 0); ctx.lineTo(8, 6); ctx.lineTo(5, 6); ctx.fill(); 
+            }
+
+            ctx.restore();
+        }
+
+        window.onload = function() {
+            initS0Chart();
+            initS1Charts();
+            document.getElementById('s2-preset').value = 'nuri'; // 기본 3단 누리호 세팅
+            loadS2Preset();
+            updateS1DV();
+            switchTab('s0'); 
+        };
+
+    </script>
+</body>
+</html>
